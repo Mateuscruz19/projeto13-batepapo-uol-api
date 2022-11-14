@@ -53,9 +53,14 @@ app.post("/participants", async (req,res) => {
         return;  
     }
 
+    const SameUsername = await collectionParticipants.find({ nome: req.body.name}).toArray()
+
+    if(SameUsername.length !== 0){
+        return res.status(409).send("Usuário já cadastrado.")
+    }
     try{
         await db.collection("participants").insertOne(user)
-        console.log(collectionMaintenance)
+        console.log(SameUsername)
     } catch (err){
         res.status(422).send(err);
     }
@@ -74,17 +79,22 @@ app.post("/participants", async (req,res) => {
      try{
          await db.collection("maintenance").insertOne(body)
          res.status(201).send("Working")
-         console.log(collectionParticipants)
+         console.log(SameUsername)
      } catch (err){
          res.status(422).send("Falhou");
      }
     
 });
 
+
+// PART 2 - GET /participants
+
 app.get ("/participants", async (req,res) => {
     const participants = await collectionParticipants.find({}).toArray()
     res.send(participants)
 });
+
+// PART 3 - GET /participants
 
 app.post("/messages", async (req,res) => {
    const message = req.body
