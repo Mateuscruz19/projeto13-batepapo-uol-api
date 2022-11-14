@@ -177,7 +177,7 @@ app.get("/messages", async (req,res) => {
                 res.sendStatus(404);
                 return;
             }
-            collectionParticipants.updateOne({ nome: user }, { $set: { lastStatus: Date.now() } }).then(res.sendStatus(200))
+            participant.updateOne({ nome: user }, { $set: { lastStatus: Date.now() } }).then(res.sendStatus(200))
         } catch
          (err) { res.status(500).send(err)}
     });
