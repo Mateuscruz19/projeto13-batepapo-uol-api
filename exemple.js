@@ -38,10 +38,8 @@ const db = mongoClient.db("bate_papo_uol")
 const collectionParticipants = db.collection("participants");
 const collectionMaintenance = db.collection("maintenance")
 const collectionMessages = db.collection("Messages")
-const today = Date.now();
 
-// PART 1 - POST /participants ||
-
+// PART 1 - POST /participants
 
 app.post("/participants", async (req,res) => {
     // User Schema verification:
@@ -89,15 +87,15 @@ app.post("/participants", async (req,res) => {
 });
 
 
-// PART 2 - GET /participants ||
+// PART 2 - GET /participants
+
 
 app.get ("/participants", async (req,res) => {
-    const participants = await collectionParticipants.find().toArray()
+    const participants = await collectionParticipants.find({}).toArray()
     res.send(participants)
 });
 
-// PART 3 - POST /messages ||
-
+// PART 3 - POST /messages
 
 app.post("/messages", async (req,res) => {
    const message = req.body
@@ -105,6 +103,7 @@ app.post("/messages", async (req,res) => {
 
    try{
     const userExists = await collectionParticipants.findOne({ name: User})
+    
     if(!userExists) {
         res.status(422).send({message: "Usuario não está conectado"})
         return
@@ -136,74 +135,89 @@ app.post("/messages", async (req,res) => {
      res.send("OK")
 });
 
-// PART 4 - POST /messages ||
+// PART 4 - GET /messages
 
-app.get("/messages", async (req,res) => {
+app.get("/messages",(req,res) => {
     const limit = parseInt(req.query.limit);
     const user = req.headers.user
 
     if(!limit){
-            await collectionMessages.find({ $or: [{ "to": user }, { "type": "message" }, { "type": "status" }] })
-            .toArray()
-            .then((messages) => {
-                res.send(messages)
-            })
-            .catch((err) =>
-                res.status(500).send(err)
-            )
-            
-        return console.log("Run Dev")
+        collectionMessages.find({ $or: [{ "to": user }, { "type": "message" }, { "type": "status" }] })
+        .toArray()
+        .then((messages) => {
+            res.send(messages)
+        })
+        .catch((err) =>
+            res.status(500).send(err)
+        )
+
 
 }
 
-            collectionMessages.find({ $or: [{ "to": user }, { "type": "message" }, { "type": "status" }] })
+    collectionMessages.find({ $or: [{ "to": user }, { "type": "message" }, { "type": "status" }] })
 
-            .toArray()
-            .then((messages) => {
-                res.send(messages.slice(-limit))
-            })
-            .catch((err) =>
-                res.status(500).send(err)
-            )
+    .toArray()
+    .then((messages) => {
+        res.send(messages.slice(-limit))
     })
+    .catch((err) =>
+        res.status(500).send(err)
+    )
+})
 
-// PART 5 - POST /status ||
+// PART 5 - POST /status
 
-    app.post("/status", async (req, res) => {
-        const user = req.headers.user
-        try {
-            const participant = await collectionParticipants.findOne({ "name": user })
-            if (!participant) {
-                res.sendStatus(404);
-                return;
-            }
-            collectionParticipants.updateOne({ nome: user }, { $set: { lastStatus: Date.now() } }).then(res.sendStatus(200))
-        } catch
-         (err) { res.status(500).send(err)}
-    });
-    
-    // PART 6 - UPDATE ||
+app.post("/status", async (req, res) => {
+    const user = req.headers.user
+    const today = Date.now();
 
-    setInterval(Update,5000)
-
-
-    function Update() {
-        collectionParticipants.find().toArray().then((p) => {
-                p.forEach(element => {
-                    const idleTime = today - element.lastStatus
-                    if (idleTime > 10000) {
-    
-                        collectionParticipants.deleteOne({ nome: element.nome })
-                        collectionMessages.insertOne({
-                            from: element.nome,
-                            to: 'Todos',
-                            text: 'sai da sala...',
-                            type: 'status',
-                            time: dayjs().format('HH:mm:ss')
-                        })
-                    }
-                });
-            })
+    try{
+      const have = await collectionParticipants.find({ "name": user }).toArray()
+      if (have.length === 0) {
+        return res.send(404);
+      }
+    } catch {
+        res.status(500).send(err)
     }
+
+    
+
+     try {
+        collectionParticipants.updateOne({ nome: user }, { $set: { lastStatus: today}})
+     } catch {
+         res.status(500).send("erro")
+     }
+      res.send(200).send("Sucesso")
+
+});
+
+setInterval(participantsUpdate, 5000)
+
+
+function participantsUpdate() {
+    const today = Date.now();
+    collectionParticipants
+        .find()
+        .toArray()
+        .then((p) => {
+            p.forEach(element => {
+                const idleTime = today - element.lastStatus
+                if (idleTime > 10000) {
+
+                    participants.deleteOne({ name: element.name })
+                    console.log("taoff", idleTime)
+                } else {
+                    console.log("ta on", idleTime)
+                }
+            });
+
+
+        })
+        .catch(err => {
+            console.log("deuruim")
+        }
+        )
+}
+
 app.listen(process.env.PORT, () =>
  console.log(`Server running in port ${process.env.PORT}`))
