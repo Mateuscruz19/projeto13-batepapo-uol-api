@@ -6,7 +6,7 @@ import joi from "joi";
 import dayjs from "dayjs";
 
 const userSchema = joi.object({
-    nome: joi.string().required()
+    name: joi.string().required()
 })
 
 const maintenanceSchema = joi.object({
@@ -15,6 +15,12 @@ const maintenanceSchema = joi.object({
     text: joi.string().required(),
     type: joi.string().required(),
     time: joi.required()
+})
+
+const menssageSchema = joi.object({
+    to: joi.string().required(),
+    text: joi.string().required(),
+    type: joi.string().required()
 })
 
 const app = express();
@@ -31,15 +37,15 @@ try{
 const db = mongoClient.db("bate_papo_uol") 
 const collectionParticipants = db.collection("participants");
 const collectionMaintenance = db.collection("maintenance")
+const collectionMessages = db.collection("Messages")
 
 // PART 1 - POST /participants
 
 app.post("/participants", async (req,res) => {
-
     // User Schema verification:
     const nome = req.body 
     const validation = userSchema.validate(nome, {abortEarly: false})
-    const user = {nome: req.body.nome,lastStatus: Date.now()}
+    const user = {nome: req.body.name,lastStatus: Date.now()}
 
     if(validation.error){
         const errors = validation.error.details.map(detail => detail.message)
@@ -54,30 +60,67 @@ app.post("/participants", async (req,res) => {
         res.status(422).send(err);
     }
 
-    // Maintenance post verification
-    const day = dayjs().format("hh:mm:ss")
-    const body = {from: nome, to: 'Todos', text: 'entra na sala...', type: 'status', time: day}
-    const validation2 = maintenanceSchema.validate(body, {abortEarly:false})
+     // Maintenance post verification
+     const day = dayjs().format("hh:mm:ss")
+     const body = {from: nome, to: 'Todos', text: 'entra na sala...', type: 'status', time: day}
+     const validation2 = maintenanceSchema.validate(body, {abortEarly:false})
 
-    if(validation.error) {
-        const er = validation2.error.details.map(detail => detail.message)
-        res.send(er);
-        return;
-    }
+     if(validation.error) {
+         const er = validation2.error.details.map(detail => detail.message)
+         res.send(er);
+         return;
+     }
 
-    try{
-        await db.collection("maintenance").insertOne(body)
-        res.status(201).send("Working")
-        console.log(collectionParticipants)
-    } catch (err){
-        res.status(422).send(err);
-    }
+     try{
+         await db.collection("maintenance").insertOne(body)
+         res.status(201).send("Working")
+         console.log(collectionParticipants)
+     } catch (err){
+         res.status(422).send("Falhou");
+     }
     
 });
 
 app.get ("/participants", async (req,res) => {
     const participants = await collectionParticipants.find({}).toArray()
-    console.log(participants)
+    res.send(participants)
+});
+
+app.post("/messages", async (req,res) => {
+   const message = req.body
+   const { User } = req.headers;
+
+   try{
+    const userExists = await collectionParticipants.findOne({ name: User})
+    if(!userExists) {
+        res.status(422).send({message: "Usuario não está conectado"})
+        return
+    }
+
+    const validation = menssageSchema.validate(message, {abortEarly: false})
+
+    if(validation.error){
+        const errors = validation.error.details.map(detail => detail.message)
+
+        res.status(422).send(errors);
+        return;  
+    }
+    const day = dayjs().format("hh:mm:ss")
+
+    await collectionMessages.insertOne({
+        ...message,
+        from: User,
+        time: day
+    });
+
+    res.status(201).send("Mensagem enviada com sucesso");
+    
+   } catch (err) {
+        console.log(err)
+        res.sendStatus(500)
+   }
+
+     res.send("OK")
 });
 
 
