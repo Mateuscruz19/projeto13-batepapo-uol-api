@@ -136,7 +136,7 @@ app.post("/messages", async (req,res) => {
      res.send("OK")
 });
 
-// PART 4 - POST /messages ||
+// PART 4 - GET /messages ||
 
 app.get("/messages", async (req,res) => {
     const limit = parseInt(req.query.limit);
@@ -184,7 +184,7 @@ app.get("/messages", async (req,res) => {
     
     // PART 6 - UPDATE ||
 
-    setInterval(Update,5000)
+    setInterval(Update,15000)
 
 
     function Update() {
