@@ -94,7 +94,7 @@ app.get ("/participants", async (req,res) => {
     res.send(participants)
 });
 
-// PART 3 - GET /participants
+// PART 3 - POST /messages
 
 app.post("/messages", async (req,res) => {
    const message = req.body
@@ -133,6 +133,34 @@ app.post("/messages", async (req,res) => {
      res.send("OK")
 });
 
+app.get("/messages",(req,res) => {
+    const limit = parseInt(req.query.limit);
+    const user = req.headers.user
+
+    if(!limit){
+        collectionMessages.find({ $or: [{ "to": user }, { "type": "message" }, { "type": "status" }] })
+        .toArray()
+        .then((messages) => {
+            res.send(messages)
+        })
+        .catch((err) =>
+            res.status(500).send(err)
+        )
+    return
+
+
+}
+
+    messages.find({ $or: [{ "to": user }, { "type": "message" }, { "type": "status" }] })
+
+    .toArray()
+    .then((messages) => {
+        res.send(messages.slice(-limit))
+    })
+    .catch((err) =>
+        res.status(500).send(err)
+    )
+})
 
 app.listen(process.env.PORT, () =>
  console.log(`Server running in port ${process.env.PORT}`))
